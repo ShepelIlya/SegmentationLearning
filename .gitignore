@@ -1,2 +1,9 @@
 
 *.Home-64
+.idea/.name
+*.xml
+*.pyc
+*.iml
+*.txt
+*.pth
+thrash.py
