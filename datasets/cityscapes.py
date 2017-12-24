@@ -17,6 +17,7 @@ zero_pad = 256 * 3 - len(palette)
 for i in range(zero_pad):
     palette.append(0)
 
+shaped_palette = np.array(palette).reshape(-1, 3)[0:19]
 
 def colorize_mask(mask):
     # mask: numpy array of the mask
@@ -94,6 +95,35 @@ def make_dataset(quality, mode, city=None):
 # ]
 
 
+def naive_prediction(quality, mode, city=None):
+    imgs = make_dataset(quality, mode, city=city)
+    weights = np.zeros((1024, 2048, num_classes), dtype=np.float)
+    res = np.zeros((1024, 2048, 3), dtype=np.uint8)
+    id_to_trainid = {-1: ignore_label, 0: ignore_label, 1: ignore_label, 2: ignore_label,
+                          3: ignore_label, 4: ignore_label, 5: ignore_label, 6: ignore_label,
+                          7: 0, 8: 1, 9: ignore_label, 10: ignore_label, 11: 2, 12: 3, 13: 4,
+                          14: ignore_label, 15: ignore_label, 16: ignore_label, 17: 5,
+                          18: ignore_label, 19: 6, 20: 7, 21: 8, 22: 9, 23: 10, 24: 11, 25: 12, 26: 13, 27: 14,
+                          28: 15, 29: ignore_label, 30: ignore_label, 31: 16, 32: 17, 33: 18}
+    cnt = 0
+    for img_path, mask_path in imgs:
+        _, mask = Image.open(img_path).convert('RGB'), Image.open(mask_path)
+        m = np.array(mask)
+        for k, v in id_to_trainid.items():
+            if v == ignore_label:
+                continue
+            weights[m == k][v] += 1
+        for i in range(1024):
+            for j in range(2048):
+                k = np.argmax(weights[i][j])
+                res[i][j] = shaped_palette[k]
+        print(cnt, "\r")
+        cnt += 1
+        break
+    im = Image.fromarray(res)
+    im.save("naive.png")
+
+
 class CityScapes(data.Dataset):
     def __init__(self, quality, mode, city=None, joint_transform=None, sliding_crop=None, transform=None, target_transform=None):
         self.imgs = make_dataset(quality, mode, city=city)
@@ -160,3 +190,6 @@ class CityScapes(data.Dataset):
 
     def __len__(self):
         return len(self.imgs)
+
+if __name__ == '__main__':
+    naive_prediction('fine', 'train')
